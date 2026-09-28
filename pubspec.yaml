@@ -1,0 +1,28 @@
+name: authoros_persistence
+description: >-
+  AuthorOS's embedded project database: the Drift schema, its migrations and
+  DriftConnectedDomainRepository. AuthorOS Write and the standalone
+  applications open their projects through it; none of them keeps a store of
+  its own (ADR-0028).
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ">=3.6.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+resolution: workspace
+
+dependencies:
+  authoros_core:
+    path: ../authoros_core
+  drift: ^2.34.3
+  drift_flutter: ^0.3.1
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  # The schema's generated file lives beside it and is regenerated here:
+  # `dart run build_runner build` in this directory.
+  build_runner: ^2.15.1
+  drift_dev: ^2.34.0
