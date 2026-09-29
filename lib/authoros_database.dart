@@ -2230,6 +2230,45 @@ class DriftConnectedDomainRepository implements ConnectedDomainRepository {
         );
   }
 
+  /// Replaces the whole roster, series and projects, with [projects] and
+  /// [series], in one transaction.
+  ///
+  /// For a restore, which is a whole-installation replace: the roster the
+  /// archive carries becomes the roster, and a project the archive does not
+  /// name leaves it. Roster-only, like [deleteProjectRosterEntry]: no record,
+  /// manuscript or writing history is touched here. A book whose series the
+  /// archive does not carry is kept standalone rather than pointing at nothing.
+  Future<void> replaceRoster({
+    required List<ProjectRosterEntry> projects,
+    required List<WritingSeries> series,
+  }) {
+    final seriesIds = {for (final one in series) one.id};
+    return database.transaction(() async {
+      await database.delete(database.projectRows).go();
+      await database.delete(database.seriesRows).go();
+      for (final one in series) {
+        await database.into(database.seriesRows).insert(_seriesCompanion(one));
+      }
+      for (final entry in projects) {
+        final inAKnownSeries =
+            entry.seriesId != null && seriesIds.contains(entry.seriesId);
+        await database.into(database.projectRows).insert(
+              _rosterEntryCompanion(
+                inAKnownSeries
+                    ? entry
+                    : ProjectRosterEntry(
+                        project: entry.project,
+                        archivedAt: entry.archivedAt,
+                        profileId: entry.profileId,
+                        createdAt: entry.createdAt,
+                        updatedAt: entry.updatedAt,
+                      ),
+              ),
+            );
+      }
+    });
+  }
+
   /// Removes a series and releases its books.
   ///
   /// The projects survive: deleting a series must never delete a manuscript.
