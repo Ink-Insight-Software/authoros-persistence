@@ -18,7 +18,7 @@ dependencies:
   authoros_core:
     git:
       url: https://github.com/Ink-Insight-Software/authoros-core.git
-      ref: 1af5c45b5afb0ddd859fddfd8e130314ab99020b
+      ref: 674f80f5c981fff07a0537a4d598329c995d850c
   drift: ^2.34.3
   drift_flutter: ^0.3.1
   flutter:
