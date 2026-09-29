@@ -47,8 +47,9 @@ served beside `index.html`. Each application copies them in its own build with
 
 ## How AuthorOS Write uses it
 
-It is the workspace's third member, beside the application and
-`authoros_core`, so there is still one resolution and one `pubspec.lock`.
+It is the workspace's other member, beside the application, so there is
+still one resolution and one `pubspec.lock`. It depends on `authoros_core` at
+the same pinned commit the application does.
 `lib/persistence/` keeps an export for each file that moved, so no import in
 the application changed.
 
