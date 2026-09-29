@@ -734,7 +734,7 @@ class AuthorOsDatabase extends _$AuthorOsDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (migrator) async {
-          await migrator.createAll();
+          await _createAllIdempotently(migrator);
           if (schemaVersion >= 2) {
             await _createSearchIndex();
           }
@@ -1180,6 +1180,45 @@ class AuthorOsDatabase extends _$AuthorOsDatabase {
       'CREATE INDEX IF NOT EXISTS scene_prose_project '
       'ON scene_prose_rows(project_id)',
     );
+  }
+
+  /// `createAll()`, made safe to run against a file that already has the
+  /// schema.
+  ///
+  /// Drift writes `user_version` only after `onCreate` *and* `beforeOpen` have
+  /// both finished, and runs neither in a transaction. A first open that dies
+  /// part-way — a tab closed or reloaded while a phone builds fifty tables and
+  /// indexes through the web worker, or any statement after them throwing —
+  /// leaves the tables on disk and the version at 0. Every later open is then
+  /// a "create" again. Tables survive that, because drift emits CREATE TABLE
+  /// IF NOT EXISTS; the generated indexes do not, because drift emits a bare
+  /// CREATE INDEX, and the first one fails with "index author_records_type
+  /// already exists". Every Studio reads this database, so all of them
+  /// reported "unavailable" and Retry could never clear it: drift keeps the
+  /// migration error on the connection and rethrows it.
+  ///
+  /// So indexes are created IF NOT EXISTS here, which also repairs a file
+  /// already stuck that way — the create finishes, the version is written,
+  /// and nothing the author stored is touched.
+  static final _bareCreateIndex = RegExp(
+    r'^\s*CREATE\s+(UNIQUE\s+)?INDEX\s+(?!IF\s+NOT\s+EXISTS)',
+    caseSensitive: false,
+  );
+
+  Future<void> _createAllIdempotently(Migrator migrator) async {
+    for (final entity in allSchemaEntities) {
+      final statement = entity is Index
+          ? entity.createStatementsByDialect[SqlDialect.sqlite]
+          : null;
+      if (statement != null) {
+        await customStatement(statement.replaceFirstMapped(
+          _bareCreateIndex,
+          (match) => 'CREATE ${match[1] ?? ''}INDEX IF NOT EXISTS ',
+        ));
+      } else {
+        await migrator.create(entity);
+      }
+    }
   }
 
   /// Whether [table] already has [column].
