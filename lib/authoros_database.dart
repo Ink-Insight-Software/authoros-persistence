@@ -725,7 +725,7 @@ class AuthorOsDatabase extends _$AuthorOsDatabase {
     driftWorker: Uri.parse('drift_worker.js'),
   );
 
-  static const currentSchemaVersion = 25;
+  static const currentSchemaVersion = 26;
   final int _schemaVersion;
 
   @override
@@ -740,6 +740,9 @@ class AuthorOsDatabase extends _$AuthorOsDatabase {
           }
           if (schemaVersion >= 13) {
             await _createSceneProseTable();
+          }
+          if (schemaVersion >= 26) {
+            await _createSceneAuthorshipTable();
           }
         },
         onUpgrade: (migrator, from, to) async {
@@ -1031,6 +1034,17 @@ class AuthorOsDatabase extends _$AuthorOsDatabase {
                   writingGoalRows, writingGoalRows.deadline);
             }
           }
+
+          // The authorship record: where each scene's characters came from.
+          //
+          // Nothing to backfill, and deliberately so. No install upgrading to
+          // 26 has ever recorded how its prose arrived, so the true state of
+          // every existing scene is "not recorded" — which is exactly what a
+          // scene with no row reads as. Inventing a row per scene would claim
+          // knowledge the app never had.
+          if (from < 26 && to >= 26) {
+            await _createSceneAuthorshipTable();
+          }
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
@@ -1179,6 +1193,31 @@ class AuthorOsDatabase extends _$AuthorOsDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS scene_prose_project '
       'ON scene_prose_rows(project_id)',
+    );
+  }
+
+  /// One row per scene: the run-length record of where its characters came
+  /// from, and the digest of the exact text that record describes.
+  ///
+  /// Beside `scene_prose_rows` rather than inside `document_json`, because
+  /// the document's shape belongs to `authoros_core` and is shared with every
+  /// application that reads a manuscript. The digest is what keeps the two
+  /// honest: a row whose digest no longer matches its scene's prose is not
+  /// used, so a path that changes prose without updating this table degrades
+  /// to "not recorded" rather than to a wrong claim.
+  Future<void> _createSceneAuthorshipTable() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS scene_authorship_rows(
+        scene_id TEXT NOT NULL PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        text_digest TEXT NOT NULL,
+        runs_json TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    ''');
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS scene_authorship_project '
+      'ON scene_authorship_rows(project_id)',
     );
   }
 
@@ -1348,6 +1387,24 @@ class AuthorOsDatabase extends _$AuthorOsDatabase {
 /// cannot drift apart.
 final List<String> _sharedScopeNames =
     kSharedScopeTypes.map((scope) => scope.name).toList();
+
+/// One scene's authorship record as stored: opaque runs and the digest of the
+/// text they describe. Interpreted by the application's `authorship.dart`.
+class SceneAuthorshipRow {
+  const SceneAuthorshipRow({
+    required this.sceneId,
+    required this.projectId,
+    required this.textDigest,
+    required this.runsJson,
+    required this.updatedAt,
+  });
+
+  final String sceneId;
+  final String projectId;
+  final String textDigest;
+  final String runsJson;
+  final DateTime updatedAt;
+}
 
 class DriftConnectedDomainRepository implements ConnectedDomainRepository {
   const DriftConnectedDomainRepository(this.database);
@@ -1539,6 +1596,87 @@ class DriftConnectedDomainRepository implements ConnectedDomainRepository {
     if (!_supportsSceneProse) return;
     await database.customStatement(
       'DELETE FROM scene_prose_rows WHERE project_id = ?',
+      [projectId],
+    );
+    await removeSceneAuthorshipForProject(projectId);
+  }
+
+  // --- Scene authorship ------------------------------------------------------
+  //
+  // Opaque to this package: the runs are written and read as the string the
+  // application encoded, and the digest is compared by the application. What
+  // an origin *is* belongs to the app, not to the database.
+
+  bool get _supportsSceneAuthorship => database.schemaVersion >= 26;
+
+  /// Every scene's authorship record in [projectId], keyed by scene id.
+  Future<Map<String, SceneAuthorshipRow>> sceneAuthorshipForProject(
+    String projectId,
+  ) async {
+    if (!_supportsSceneAuthorship) return const {};
+    final rows = await database.customSelect(
+      'SELECT * FROM scene_authorship_rows WHERE project_id = ?',
+      variables: [Variable<String>(projectId)],
+    ).get();
+    return {
+      for (final row in rows)
+        row.read<String>('scene_id'): SceneAuthorshipRow(
+          sceneId: row.read<String>('scene_id'),
+          projectId: row.read<String>('project_id'),
+          textDigest: row.read<String>('text_digest'),
+          runsJson: row.read<String>('runs_json'),
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(
+            row.read<int>('updated_at'),
+            isUtc: true,
+          ),
+        ),
+    };
+  }
+
+  /// Writes [rows], replacing whatever those scenes' records said before.
+  Future<void> putSceneAuthorship(Iterable<SceneAuthorshipRow> rows) async {
+    if (!_supportsSceneAuthorship) return;
+    final entries = rows.toList();
+    if (entries.isEmpty) return;
+    await database.transaction(() async {
+      for (final entry in entries) {
+        await database.customStatement(
+          'INSERT INTO scene_authorship_rows('
+          'scene_id, project_id, text_digest, runs_json, updated_at) '
+          'VALUES (?, ?, ?, ?, ?) '
+          'ON CONFLICT(scene_id) DO UPDATE SET '
+          'project_id = excluded.project_id, '
+          'text_digest = excluded.text_digest, '
+          'runs_json = excluded.runs_json, '
+          'updated_at = excluded.updated_at',
+          [
+            entry.sceneId,
+            entry.projectId,
+            entry.textDigest,
+            entry.runsJson,
+            entry.updatedAt.toUtc().millisecondsSinceEpoch,
+          ],
+        );
+      }
+    });
+  }
+
+  /// Removes the records of [sceneIds]. Called with the prose they describe.
+  Future<void> removeSceneAuthorship(Iterable<String> sceneIds) async {
+    if (!_supportsSceneAuthorship) return;
+    for (final id in sceneIds.toSet()) {
+      await database.customStatement(
+        'DELETE FROM scene_authorship_rows WHERE scene_id = ?',
+        [id],
+      );
+    }
+  }
+
+  /// Removes every record in [projectId].
+  Future<void> removeSceneAuthorshipForProject(String projectId) async {
+    if (!_supportsSceneAuthorship) return;
+    await database.customStatement(
+      'DELETE FROM scene_authorship_rows WHERE project_id = ?',
       [projectId],
     );
   }
@@ -3040,6 +3178,12 @@ class DriftConnectedDomainRepository implements ConnectedDomainRepository {
       // scene happened to reuse an id.
       if (_supportsSceneProse) {
         await database.customStatement('DELETE FROM scene_prose_rows');
+      }
+      // The records describe that prose, so they go with it. A snapshot does
+      // not carry them yet, and a record left behind would be compared
+      // against — and could only ever fail to match — a different book.
+      if (_supportsSceneAuthorship) {
+        await database.customStatement('DELETE FROM scene_authorship_rows');
       }
       await _insertSnapshot(snapshot);
     });
