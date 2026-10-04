@@ -1,29 +1,49 @@
 # authoros_persistence
 
-AuthorOS's project database, moved out of `lib/persistence/` on September 28,
-2026 so that a standalone application opens projects with the same schema
-rather than keeping a store of its own. The decision is
-[ADR-0028](../docs/architecture/ADR-0028-the-record-store-is-a-shared-package.md).
-The first application to need it is AOS Worldsmith, whose Phase 1 gate is to
-create, save, reopen, back up and restore a project without AuthorOS Write.
+**AuthorOS's project database, and its one copy.** The Drift schema, its
+migrations and `DriftConnectedDomainRepository`. AuthorOS Write and the
+standalone applications open their projects through it, so a project written
+by one opens in another with the same schema; none of them keeps a store of
+its own (AOS-Write ADR-0028).
+
+It moved here from `flutter-author-studio-v1/authoros_persistence/` in
+`Ink-Insight-Software/AOS-Write` on October 4, 2026, with its history. Before
+that it was a member of AOS-Write's workspace, which no other repository can
+read: AOS-Write is private. It moved for the reason `authoros_core` did, so
+that AOS Worldsmith (`Ink-Insight-Software/AuthorOS-Expansions`) can depend on
+it from its CI and its web build with no credential.
+
+**A change to the database is made here first.** It reaches an application
+only when that application moves its pin, and that application's suite runs
+against it before it ships.
+
+## Using it
+
+Depend on a commit, never a branch:
+
+```yaml
+dependencies:
+  authoros_persistence:
+    git:
+      url: https://github.com/Ink-Insight-Software/authoros-persistence.git
+      ref: <commit>
+  authoros_core:
+    git:
+      url: https://github.com/Ink-Insight-Software/authoros-core.git
+      ref: <the commit this package's pubspec.yaml pins>
+```
+
+**Pin `authoros_core` at the commit this package pins.** Two git refs for one
+package do not resolve, so pub reports the conflict rather than building two
+cores. Move both pins together.
 
 ## What is in it
 
-The four files that were `lib/persistence/`:
-
 - `authoros_database.dart`: `AuthorOsDatabase`, its 22 tables, its migrations
-  (schema version 25) and `DriftConnectedDomainRepository`
+  (schema version 27) and `DriftConnectedDomainRepository`
 - `authoros_database.g.dart`: its generated part
 - `record_avatar.dart` and `voice_note_store.dart`: the two stores over the
-  record-asset table
-
-They moved unchanged apart from two things:
-
-- **Their imports of the core** now name `package:authoros_core/...`.
-- **The two stores take their database.** `RecordAvatarStore` and
-  `VoiceNoteStore` used to fall back to AuthorOS Write's global database when
-  given none. Every caller already passed one, so the fallback is gone and
-  `database` is required.
+  record-asset table. Each takes its database; neither falls back to a global.
 
 It is a Flutter package, not pure Dart like `authoros_core`, because Drift
 opens its file through `drift_flutter` and the avatar store decodes images
@@ -31,38 +51,28 @@ with `dart:ui`.
 
 ## What is not in it
 
-**Which database file an application opens.** `authorOsDatabase` and
-`authorOsRepository` stay in AuthorOS Write, in
-`lib/persistence/authoros_database.dart`, beside the export of this package.
-Every application calls `AuthorOsDatabase.defaults()`, or passes its own
-executor, and holds its own globals.
+**Which database file an application opens.** Each application calls
+`AuthorOsDatabase.defaults()`, or passes its own executor, and holds its own
+globals. AuthorOS Write keeps `authorOsDatabase` and `authorOsRepository` in
+its `lib/persistence/authoros_database.dart`.
 
 **An application's own state.** No application may add a table here. What is
 not a project record is kept in the application's own storage (ADR-0028,
 *Consequences*).
 
 **The web assets.** A browser build needs `sqlite3.wasm` and `drift_worker.js`
-served beside `index.html`. Each application copies them in its own build with
-`scripts/provision-drift-web-assets.sh`.
+served beside `index.html`, matching the resolved `drift`. Each application
+copies them in its own build; AOS-Write's `scripts/provision-drift-web-assets.sh`
+is the reference.
 
-## How AuthorOS Write uses it
-
-It is the workspace's other member, beside the application, so there is
-still one resolution and one `pubspec.lock`. It depends on `authoros_core` at
-the same pinned commit the application does.
-`lib/persistence/` keeps an export for each file that moved, so no import in
-the application changed.
-
-**Source-reading tests must read this package**, since the exports have no
-source to read. `test/support/source_tree.dart` lists `authoros_persistence/lib`
-as a source root, and its `sourcePathFor` follows `lib/persistence/...` here.
-
-## Regenerating the schema
+## Working on it
 
 ```
-cd authoros_persistence
-dart run build_runner build --delete-conflicting-outputs
+flutter pub get
+flutter analyze
+flutter test
+dart run build_runner build --delete-conflicting-outputs   # after a schema change
 ```
 
-Run it here, where the part file lives. After the move it regenerated the
-committed file byte for byte.
+The generated part is committed. A schema change bumps
+`AuthorOsDatabase.currentSchemaVersion` and adds its migration step.
