@@ -5,16 +5,15 @@ description: >-
   applications open their projects through it; none of them keeps a store of
   its own (ADR-0028).
 publish_to: none
-version: 0.1.0
+version: 0.2.0
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
   flutter: ">=3.19.0"
 
-resolution: workspace
-
 dependencies:
-  # The same pin as the application's `pubspec.yaml`; move both together.
+  # Pinned by commit. An application that depends on this package pins
+  # authoros_core at the same commit, or pub reports the conflict.
   authoros_core:
     git:
       url: https://github.com/Ink-Insight-Software/authoros-core.git
@@ -26,6 +25,8 @@ dependencies:
 
 dev_dependencies:
   # The schema's generated file lives beside it and is regenerated here:
-  # `dart run build_runner build` in this directory.
+  # `dart run build_runner build --delete-conflicting-outputs`.
   build_runner: ^2.15.1
   drift_dev: ^2.34.0
+  flutter_test:
+    sdk: flutter
