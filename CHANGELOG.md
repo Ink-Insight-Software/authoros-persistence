@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Pins `authoros_core` at 0.8.0 (`7959f25`, the merge of
+  authoros-core#8), the core AOS-Write's AuthorOS Update 1.7.0 builds
+  against. No code changed.
+
 ## 0.2.0
 
 - **Its own repository**, moved from AOS-Write's
