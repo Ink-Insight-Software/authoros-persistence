@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+
+- Pins `authoros_core` at 0.10.0 (`148df25`, the merge of
+  authoros-core#10), which adds the `civilisation` record type and the
+  `occupies` connection for AOS Worldsmith. No code changed.
+
 ## 0.2.1
 
 - Pins `authoros_core` at 0.8.0 (`7959f25`, the merge of
