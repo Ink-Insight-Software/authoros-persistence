@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+- Pins `authoros_core` at 0.11.0 (`1b2bc75`, the merge of
+  authoros-core#11), which moves `ConnectionEngine` into the core so AOS
+  Worldsmith can link records with it. No code changed.
+
 ## 0.2.2
 
 - Pins `authoros_core` at 0.10.0 (`148df25`, the merge of
