@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.4
+
+- Pins `authoros_core` at 0.12.0 (`6945873`, the merge of
+  authoros-core#12), which moves pinned records into the core, one
+  collection per project, so AOS Worldsmith pins with the record AOS-Write's
+  Story Codex uses. No code changed.
+
 ## 0.2.3
 
 - Pins `authoros_core` at 0.11.0 (`1b2bc75`, the merge of
