@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.6
+
+- Pins `authoros_core` at 0.15.0 (`782b4d9`, the merge of
+  authoros-core#16), which adds the faith-institution and law-and-war record
+  types, four connection types, consequence traversal and the app-presence
+  marker for AOS Worldsmith Phases 6 to 10. No code changed.
+
 ## 0.2.5
 
 - Pins `authoros_core` at 0.13.0 (`b5cac09`, the merge of
