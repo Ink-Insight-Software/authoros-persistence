@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.5
+
+- Pins `authoros_core` at 0.13.0 (`b5cac09`, the merge of
+  authoros-core#14), which adds the `title` and `estate` record types, union
+  and parentage metadata, and moves the story graph into the core for AOS
+  Worldsmith's Ancestry Room. No code changed.
+
 ## 0.2.4
 
 - Pins `authoros_core` at 0.12.0 (`6945873`, the merge of
