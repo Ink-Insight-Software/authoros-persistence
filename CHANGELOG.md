@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.8
+
+- Pins `authoros_core` at 0.17.0 (`65a0c48`, the merge of
+  authoros-core#18), which moves `BranchService` into the core and adds
+  nine consequence rules. No code changed.
+
 ## 0.2.7
 
 - Pins `authoros_core` at 0.16.0 (`9372516`, the merge of
