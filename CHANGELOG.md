@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.9
+
+- **`DriftConnectedDomainRepository.deleteBranch`**, for authoros_core
+  0.18.0's new repository method: removes a story branch, its record and
+  link overlays, the versions and audit events filed under it and its
+  search-index rows, in one transaction. Canon and other branches are
+  untouched. Tested in `test/branch_delete_test.dart`, with an archive
+  written after the delete.
+- **The `authoros_core` pin has not moved yet**: it still names 0.17.0,
+  which has no `deleteBranch`. Move it to the merge of the core's 0.18.0
+  change when that lands; until then, build against it with a local
+  `pubspec_overrides.yaml`.
+
 ## 0.2.8
 
 - Pins `authoros_core` at 0.17.0 (`65a0c48`, the merge of
