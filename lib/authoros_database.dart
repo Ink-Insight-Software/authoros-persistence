@@ -1969,6 +1969,51 @@ class DriftConnectedDomainRepository implements ConnectedDomainRepository {
     });
   }
 
+  /// See [ConnectedDomainRepository.deleteBranch].
+  ///
+  /// Overlays before the branch, as in [eraseProject], for the foreign key.
+  /// History is matched on `branch_id` and the branch's project together, so
+  /// a branch id reused in another project cannot take that project's rows.
+  /// The search index's overlay rows are matched on `branch_id` too: they
+  /// carry it, and their entity ids are synthetic.
+  @override
+  Future<int> deleteBranch(String branchId) {
+    return database.transaction(() async {
+      final branch = await (database.select(database.storyBranchRows)
+            ..where((table) => table.id.equals(branchId)))
+          .getSingleOrNull();
+      if (branch == null) return 0;
+      var removed = 0;
+      removed += await (database.delete(database.branchLinkOverlayRows)
+            ..where((table) => table.branchId.equals(branchId)))
+          .go();
+      removed += await (database.delete(database.branchRecordOverlayRows)
+            ..where((table) => table.branchId.equals(branchId)))
+          .go();
+      removed += await (database.delete(database.storyBranchRows)
+            ..where((table) => table.id.equals(branchId)))
+          .go();
+      removed += await (database.delete(database.recordVersionRows)
+            ..where((table) =>
+                table.projectId.equals(branch.projectId) &
+                table.branchId.equals(branchId)))
+          .go();
+      removed += await (database.delete(database.auditEventRows)
+            ..where((table) =>
+                table.projectId.equals(branch.projectId) &
+                table.branchId.equals(branchId)))
+          .go();
+      if (database.schemaVersion >= 7) {
+        await database.customStatement(
+          "DELETE FROM author_search WHERE entity_kind = 'branchRecord' "
+          'AND branch_id = ?',
+          [branchId],
+        );
+      }
+      return removed;
+    });
+  }
+
   @override
   Future<void> appendHistory(
     RecordVersion version,
