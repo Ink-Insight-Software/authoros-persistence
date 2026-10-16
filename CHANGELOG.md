@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.10
+
+- **`eraseProject` removes a branch's search-index rows.** A branch
+  overlay's row in `author_search` has a synthetic entity id, so the
+  per-entity delete never named it, and deleting a project forever left
+  those rows behind. They are now dropped by `branch_id`, for every branch
+  of the project, as `deleteBranch` drops them. Tested in
+  `test/branch_delete_test.dart`. No schema change.
+
 ## 0.2.9
 
 - **`DriftConnectedDomainRepository.deleteBranch`**, for authoros_core

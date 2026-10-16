@@ -175,6 +175,24 @@ void main() {
     expect(await repository.deleteBranch('gone'), 0);
   });
 
+  test('erasing the project takes every branch\'s search rows', () async {
+    expect(await searchRows('keep'), greaterThan(0));
+    expect(await searchRows('gone'), greaterThan(0));
+
+    await repository.eraseProject(project);
+
+    expect(await searchRows('keep'), 0);
+    expect(await searchRows('gone'), 0);
+    final left = await database
+        .customSelect(
+          'SELECT COUNT(*) AS n FROM author_search WHERE project_id = ?',
+          variables: [Variable<String>(project)],
+        )
+        .getSingle();
+    expect(left.read<int>('n'), 0);
+    expect(await repository.branchesByProject(project), isEmpty);
+  });
+
   test('an archive written after a delete carries nothing of the branch',
       () async {
     await branches.deleteBranch('gone');

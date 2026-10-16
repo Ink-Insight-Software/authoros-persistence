@@ -2787,7 +2787,8 @@ class DriftConnectedDomainRepository implements ConnectedDomainRepository {
   ///    the FTS index, which know entities rather than projects. They are
   ///    resolved through the ids gathered first.
   ///  * **Named by a branch** — the two overlay tables, which hang off
-  ///    `storyBranchRows` and have to go before it or the foreign key refuses.
+  ///    `storyBranchRows` and have to go before it or the foreign key refuses,
+  ///    and the FTS index's overlay rows, whose entity ids are synthetic.
   ///
   /// The order below is the dependency order and is not arrangeable to taste.
   @override
@@ -2921,6 +2922,18 @@ class DriftConnectedDomainRepository implements ConnectedDomainRepository {
         for (final id in entityIds) {
           await database.customStatement(
             'DELETE FROM author_search WHERE entity_id = ?',
+            [id],
+          );
+        }
+      }
+      // A branch's overlay rows are not keyed by a record of the project:
+      // their entity ids are synthetic, so the loop above never names them.
+      // They carry the branch, and are dropped by it, as [deleteBranch] does.
+      if (database.schemaVersion >= 7) {
+        for (final id in branchIds) {
+          await database.customStatement(
+            "DELETE FROM author_search WHERE entity_kind = 'branchRecord' "
+            'AND branch_id = ?',
             [id],
           );
         }
