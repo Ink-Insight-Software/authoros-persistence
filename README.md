@@ -42,8 +42,12 @@ cores. Move both pins together.
 - `authoros_database.dart`: `AuthorOsDatabase`, its 22 tables, its migrations
   (schema version 27) and `DriftConnectedDomainRepository`
 - `authoros_database.g.dart`: its generated part
-- `record_avatar.dart` and `voice_note_store.dart`: the two stores over the
-  record-asset table. Each takes its database; neither falls back to a global.
+- `record_avatar.dart`, `voice_note_store.dart` and
+  `research_reference_store.dart`: the three stores over the record-asset
+  table, one role each (`avatar`, `voice`, `reference`). Each takes its
+  database; none falls back to a global.
+- `record_assets.dart`: the same table read whole, every role, for the
+  archive, a restore and a copy.
 
 It is a Flutter package, not pure Dart like `authoros_core`, because Drift
 opens its file through `drift_flutter` and the avatar store decodes images

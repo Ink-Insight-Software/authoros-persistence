@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.2.11
+
+For reference attachments and backups that carry files (October 16, 2026).
+No schema change: both read and write the existing `RecordAssetRows`.
+
+- **`ResearchReferenceStore`** (`research_reference_store.dart`) keeps a
+  reference picture or PDF under the `reference` role, on the research
+  entry it belongs to, as `RecordAvatarStore` keeps the `avatar` role.
+  `ResearchReferenceFile.fromBytes` checks a picked file (the core's
+  `ResearchReferences.rejection`, then, for a picture, that it decodes) and
+  answers with a refusal to show rather than throwing. `infoOf` lists a
+  project's reference files with their type, size and dimensions without
+  reading their bytes.
+- **`RecordAssets`** (`record_assets.dart`) reads the table whole, every
+  role, as the core's `RecordAsset`, so a backup can carry them
+  (`exportSnapshot(recordAssets:)`), a restore can put them back
+  (`replaceAll`), and a duplicate can take them to its copies' ids
+  (`copyInto`). Not a third store: it owns no role.
+- **Needs authoros-core 0.20.0** (`RecordAsset`, `ResearchReferences`, the
+  archive's `recordAssets`). The pin still names 0.19.0; move it to the merge
+  of the core's 0.20.0 change. Until then, build against it with a local
+  `pubspec_overrides.yaml`.
+- **Tests** in `test/record_assets_test.dart`.
+
 ## 0.2.10
 
 - **`eraseProject` removes a branch's search-index rows.** A branch
