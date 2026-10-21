@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.12
+
+- **Pins authoros-core 0.21.0** (October 21, 2026): the `claims`
+  connection and a title's `heldThrough`, `heldSince`, `regent` and
+  `regency`. Nothing here changes: the core's change is additive, and pub
+  allows an application one core ref, so this package moves with it.
+
 ## 0.2.11
 
 For reference attachments and backups that carry files (October 16, 2026).
