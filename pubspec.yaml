@@ -5,7 +5,7 @@ description: >-
   applications open their projects through it; none of them keeps a store of
   its own (ADR-0028).
 publish_to: none
-version: 0.2.12
+version: 0.2.13
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -17,7 +17,7 @@ dependencies:
   authoros_core:
     git:
       url: https://github.com/Ink-Insight-Software/authoros-core.git
-      ref: e5d5d81d03f72afcb851ca5f5dd47f9e033c2a27
+      ref: 7e18f7fd26d74f0dcd5d35177a8710b632d7bf49
   drift: ^2.34.3
   drift_flutter: ^0.3.1
   flutter:
