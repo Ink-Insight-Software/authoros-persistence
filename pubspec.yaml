@@ -30,3 +30,12 @@ dev_dependencies:
   drift_dev: ^2.34.0
   flutter_test:
     sdk: flutter
+
+# For this package's own checks only: pub ignores a dependency's overrides, so
+# no application is held to this. drift 2.35 deprecates `$_getPrefetchedData`,
+# which the generated schema file calls, and `flutter analyze` here treats an
+# info as fatal. With no lockfile the range above floats, so the check is held
+# to the version AuthorOS Write locks. Regenerating the schema file under a
+# newer drift is the other fix, and a change to what ships.
+dependency_overrides:
+  drift: 2.34.3
